@@ -1,23 +1,38 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
 import './App.css';
+import AutoComplete from './components/AutoComplete';
+import ModalComponent from './components/ModalComponent';
+import ReactSelect from './components/ReactSelect';
+import ReactDatepicker from './components/ReactDatepicker';
 
 function App() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const openModal = () => {
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+  };
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <AutoComplete />
+      <hr></hr>
+      <div className=' container'>
+      <h1 className=' text-center'>React Modal Example</h1>
+      <button onClick={openModal}>Open Modal</button>
+      <ModalComponent isOpen={modalOpen} closeModal={closeModal} />
+      </div>
+      <hr></hr>
+      <div className=' container'>
+        <h1 className=' text-center'>React select</h1>
+        <ReactSelect />
+      </div>
+      <hr></hr>
+      <div className=' container '>
+        <h1>Date picker</h1>
+        <ReactDatepicker />
+      </div>
     </div>
   );
 }
