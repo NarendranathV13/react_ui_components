@@ -5,6 +5,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import Map from '../components/Map';
 
 const FullCalendars = () => {
     const [startOfMonth, setStartOfMonth] = useState(null);
@@ -259,6 +260,7 @@ const FullCalendars = () => {
                     </div>
                 </div>
             </div>
+            <Map />
         </>
     )
 }
