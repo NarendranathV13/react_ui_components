@@ -11,24 +11,46 @@ const FullCalendars = () => {
     const [endOfMonth, setEndOfMonth] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [selectedDate, setSelectedDate] = useState(null);
+    const [editableEvent, setEditableEvent] = useState(null);
+    const [events, setEvents] = useState([]);
 
+    const handleEdit = (eventId) => {
+        const eventToEdit = events.find(event => event.id === eventId);
+        setEditableEvent(eventToEdit);
+    }
+
+    const handleSaveEdit = async () => {
+        try {
+            const response = await axios.put(`https://65002c0e18c34dee0cd46da3.mockapi.io/Formdata/${editableEvent.id}`, editableEvent);
+            setEvents(prevEvents => 
+                prevEvents.map(event => (event.id === editableEvent.id && editableEvent) || event)
+            )
+            setEditableEvent(null);
+            closeModal();
+            Swal.fire({
+                icon: 'success',
+                title: 'Event edited successfully',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        } catch (error) {
+            console.error('Error editing event:', error);
+            alert('Error editing event');
+        }
+    }
     const handleDate = (arg) => {
         setShowModal(true);
         setSelectedDate(new Date(arg.start));
     }
-
     const closeModal = () => {
         setShowModal(false);
         setSelectedDate(null);
     }
-
     const [formData, setFormData] = useState({
         title: '',
         start: '',
         end: ''
     });
-
-    const [events, setEvents] = useState([]);
 
     const handleChange = (e) => {
         setFormData({
@@ -196,27 +218,40 @@ const FullCalendars = () => {
                             <button type="button" className="btn-close " data-dismiss="modal" aria-label="Close" onClick={closeModal}></button>
                         </div>
                         <div className="modal-body">
-                            <ul>
-                                {events.filter(event => {
-                                    return (
-                                        selectedDate &&
-                                        new Date(event.start).toLocaleDateString() === selectedDate.toLocaleDateString()
-                                    );
-                                }).map((event, index) => (
-                                    <li key={index} className='d-flex justify-content-between'>
-                                        {event.title}
-                                        <span className="delete-icon mx-2 " onClick={() => handleDelete(event.id)}>
-                                        <i class="fa-solid fa-trash"></i>
-                                        </span>
-                                    </li>
-                                ))}
-                                {selectedDate && events.filter(event => {
-                                    return (
-                                        selectedDate &&
-                                        new Date(event.start).toLocaleDateString() === selectedDate.toLocaleDateString()
-                                    );
-                                }).length === 0 && <h5>No events</h5>}
-                            </ul>
+                        <ul>
+                            {events.filter(event => {
+                                return (
+                                    selectedDate &&
+                                    new Date(event.start).toLocaleDateString() === selectedDate.toLocaleDateString()
+                                );
+                            }).map((event, index) => (
+                                <li key={index} className='mx-2'>
+                                    {editableEvent && editableEvent.id === event.id ? (
+                                        <input
+                                            type="text"
+                                            value={editableEvent.title}
+                                            onChange={e => setEditableEvent({ ...editableEvent, title: e.target.value })}
+                                        />
+                                    ) : (
+                                        <span>{event.title}</span>
+                                    )}
+                                    <span className="delete-icon mx-2 " onClick={() => handleDelete(event.id)}>
+                                        <i className="fas fa-trash mx-2" style={{ color: '#ce1c1c', cursor: 'pointer' }}></i>
+                                    </span>
+                                    {editableEvent && editableEvent.id === event.id ? (
+                                        <i className="fa-regular fa-check-square mx-2" style={{ color: '#00a000', cursor: 'pointer' }} onClick={handleSaveEdit}></i>
+                                    ) : (
+                                        <i className="fa-regular fa-pen-to-square mx-2" style={{ color: '#ebc400', cursor: 'pointer' }} onClick={() => handleEdit(event.id)}></i>
+                                    )}
+                                </li>
+                            ))}
+                            {selectedDate && events.filter(event => {
+                                return (
+                                    selectedDate &&
+                                    new Date(event.start).toLocaleDateString() === selectedDate.toLocaleDateString()
+                                );
+                            }).length === 0 && <h5>No events</h5>}
+                        </ul>
                         </div>
                         <div className="modal-footer">
                             <button type="button" className="btn btn-secondary" data-dismiss="modal" onClick={closeModal}>Close</button>
