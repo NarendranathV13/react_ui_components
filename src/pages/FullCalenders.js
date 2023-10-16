@@ -2,10 +2,26 @@ import React, { useState, useEffect } from 'react';
 import 'react-datepicker/dist/react-datepicker.css';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const FullCalendars = () => {
-    // State for form data and events
+    const [startOfMonth, setStartOfMonth] = useState(null);
+    const [endOfMonth, setEndOfMonth] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
+
+    const handleDate = (arg) => {
+        setShowModal(true);
+        setSelectedDate(new Date(arg.start));
+    }
+
+    const closeModal = () => {
+        setShowModal(false);
+        setSelectedDate(null);
+    }
+
     const [formData, setFormData] = useState({
         title: '',
         start: '',
@@ -14,7 +30,6 @@ const FullCalendars = () => {
 
     const [events, setEvents] = useState([]);
 
-    // Update form data on input change
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -22,38 +37,64 @@ const FullCalendars = () => {
         });
     }
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
-    
+
         const newEvent = {
             title: formData.title,
             start: formData.start,
             end: formData.end || null
         };
-    
+
         try {
-            // POST request to the API to add a new event
             const response = await axios.post('https://65002c0e18c34dee0cd46da3.mockapi.io/Formdata', newEvent);
             console.log('Event added successfully');
-            // Reset form data 
+
+            newEvent.id = response.data.id; // Assuming the API returns the ID
+
             setFormData({
                 title: '',
                 start: '',
                 end: ''
             });
-            setEvents(prevEvents => [...prevEvents, newEvent]);// update event state
+            setEvents(prevEvents => [...prevEvents, newEvent]);
         } catch (error) {
             console.error('Error posting form data:', error);
             alert('Error posting form data');
         }
     }
+
+    const handleDelete = (eventId) => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'You will not be able to recover this event!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const updatedEvents = events.filter(event => event.id !== eventId);
+                setEvents(updatedEvents);
+    
+                try {
+                    await axios.delete(`https://65002c0e18c34dee0cd46da3.mockapi.io/Formdata/${eventId}`);
+                    console.log('Event deleted successfully');
+                } catch (error) {
+                    console.error('Error deleting event:', error);
+                    alert('Error deleting event');
+                }
+            }
+        });
+    }
+    
     useEffect(() => {
-        // Fetch events from the API 
         const fetchEvents = async () => {
             try {
                 const response = await axios.get('https://65002c0e18c34dee0cd46da3.mockapi.io/Formdata');
                 const fetchedEvents = response.data.map(event => ({
+                    id: event.id, // Assuming the API provides an ID for events
                     title: event.title,
                     start: event.start,
                     end: event.end || null
@@ -65,7 +106,6 @@ const FullCalendars = () => {
         }
         fetchEvents();
     }, []);
-
     return (
         <>
             <nav className="navbar navbar-light bg-dark h-50">
@@ -112,8 +152,13 @@ const FullCalendars = () => {
                 </div>
             </nav>
             {/* FullCalendar component for displaying events */}
+         
             <div className='container'>
                 <FullCalendar
+                    datesSet={(arg) => {
+                        setStartOfMonth(arg.start)
+                        setEndOfMonth(arg.end)
+                    }}
                     defaultView="dayGridMonth"
                     header={{
                         left: "prev,next",
@@ -121,9 +166,63 @@ const FullCalendars = () => {
                         right: "dayGridMonth,timeGridWeek,timeGridDay"
                     }}
                     themeSystem="Simplex"
-                    plugins={[dayGridPlugin]}
+                    plugins={[dayGridPlugin, interactionPlugin]}
+                    initialView="dayGridMonth"
                     events={events}
+                    selectable={true}
+                    select={handleDate}
                 />
+                {startOfMonth && endOfMonth && (
+                    <div>
+                        Start of the month: {startOfMonth.toISOString()}
+                        <br />
+                        End of the month: {endOfMonth.toISOString()}
+                    </div>
+                )}
+            </div>
+            {/* modal */}
+            <div className="modal" tabIndex="-1" role="dialog" style={{ display: showModal ? 'block' : 'none' }}>
+                <div className="modal-dialog" role="document">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">
+                                {selectedDate &&
+                                    selectedDate.toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                            </h5>
+                            <button type="button" className="btn-close " data-dismiss="modal" aria-label="Close" onClick={closeModal}></button>
+                        </div>
+                        <div className="modal-body">
+                            <ul>
+                                {events.filter(event => {
+                                    return (
+                                        selectedDate &&
+                                        new Date(event.start).toLocaleDateString() === selectedDate.toLocaleDateString()
+                                    );
+                                }).map((event, index) => (
+                                    <li key={index} className='d-flex justify-content-between'>
+                                        {event.title}
+                                        <span className="delete-icon mx-2 " onClick={() => handleDelete(event.id)}>
+                                        <i class="fa-solid fa-trash"></i>
+                                        </span>
+                                    </li>
+                                ))}
+                                {selectedDate && events.filter(event => {
+                                    return (
+                                        selectedDate &&
+                                        new Date(event.start).toLocaleDateString() === selectedDate.toLocaleDateString()
+                                    );
+                                }).length === 0 && <h5>No events</h5>}
+                            </ul>
+                        </div>
+                        <div className="modal-footer">
+                            <button type="button" className="btn btn-secondary" data-dismiss="modal" onClick={closeModal}>Close</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </>
     )
